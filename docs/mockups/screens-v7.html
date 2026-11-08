@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Экраны v7</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --deep:#07080d;--bg:#0b0d14;--card:#11141c;--raised:#1a1e28;
+    --line:rgba(238,240,245,.08);--fg:#eef0f5;--fg2:#a3a9b8;--mut:#7a8296;
+    --acc:#38bdf8;--on-acc:#04111f;--ok:#4cc38a;
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{background:#05060a;color:var(--fg);font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif}
+  .page{padding:24px}
+  .page h1{font-size:20px;font-weight:500;margin-bottom:4px}
+  .page p{color:var(--fg2);font-size:14px;margin-bottom:16px;max-width:900px}
+  .fit{width:100%;max-width:1280px;aspect-ratio:16/9;position:relative;overflow:hidden;border-radius:12px;border:1px solid var(--line)}
+  .stage{width:1280px;height:720px;position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg)}
+  svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;transition:background-color .15s var(--ease),transform .15s var(--ease)}
+  button:active{transform:scale(.97)}
+
+  /* system bar placeholder (device's own) */
+  .sys{height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;color:var(--mut);font-size:14px;background:var(--deep);border-bottom:1px solid var(--line)}
+
+  .sys{padding-left:8px}
+  .sys .nav{display:flex;align-items:center;gap:8px;height:100%}
+  .sys .nav i{width:40px;height:40px;display:flex;align-items:center;justify-content:center}
+  .sys .nav svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linejoin:round}
+  .sys .nav em{font-style:normal;margin-left:8px}
+  .main{position:absolute;top:40px;left:0;right:0;bottom:96px;padding:24px;display:grid;grid-template-columns:1fr 416px;gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px}
+
+  /* now playing */
+  .np{padding:24px;display:grid;grid-template-columns:232px 1fr;grid-template-rows:auto 1fr;column-gap:24px}
+  .cover{width:232px;height:232px;border-radius:12px;overflow:hidden;background:#0e1018}
+  .meta{display:flex;flex-direction:column;min-width:0}
+  .src{display:flex;align-items:center;gap:8px;color:var(--mut);font-size:16px}
+  .src svg{width:18px;height:18px}
+  .ttl{font-size:32px;font-weight:500;line-height:1.15;margin-top:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .art{font-size:20px;color:var(--fg2);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .alb{font-size:16px;color:var(--mut);margin-top:4px}
+  .vol{margin-top:auto;display:flex;align-items:center;gap:12px;color:var(--mut);font-size:16px}
+  .vol .ticks{flex:1;height:16px;display:flex;align-items:flex-end;gap:4px}
+  .vol .ticks s{flex:1;height:8px;background:rgba(238,240,245,.14);border-radius:1px}
+  .vol .ticks s.on{background:var(--fg2)}
+  .vol .ticks s:nth-child(5n){height:14px}
+  .vol b{color:var(--fg);font-weight:500;width:28px;text-align:right}
+
+  .transport{grid-column:1/-1;align-self:end}
+  .scale{position:relative;height:28px}
+  .scale .tk{position:absolute;left:0;right:0;top:0;height:10px;display:flex;justify-content:space-between;align-items:flex-end}.scale .tk s{width:1px;height:5px;background:rgba(238,240,245,.22)}.scale .tk s.l{height:10px;background:rgba(238,240,245,.4)}
+  .scale .tr{position:absolute;left:0;right:0;top:16px;height:8px;border-radius:4px;background:rgba(238,240,245,.10)}
+  .scale .tr i{position:absolute;left:0;top:0;bottom:0;width:38%;border-radius:4px;background:var(--acc)}
+  .scale .tr i::after{content:"";position:absolute;right:-12px;top:-8px;width:24px;height:24px;border-radius:50%;background:var(--fg);border:4px solid var(--card)}
+  .times{display:flex;justify-content:space-between;color:var(--fg2);font-size:16px;margin-top:8px}
+  .ctl{display:flex;align-items:center;justify-content:center;gap:40px;margin-top:4px}
+  .ctl .b{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--raised);border:1px solid var(--line)}
+  .ctl .b svg{width:28px;height:28px}
+  .ctl .p{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--fg);color:var(--bg);box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+  .ctl .p svg{width:32px;height:32px;fill:currentColor;stroke:none}
+
+  /* right column */
+  .col{display:grid;grid-template-rows:1fr auto;gap:16px}
+  .phone{padding:24px;display:flex;flex-direction:column}
+  .phone .row{display:flex;align-items:center;gap:12px;color:var(--fg2);font-size:16px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+  .phone h2{font-size:28px;font-weight:500;line-height:1.2;margin-top:16px}
+  .phone .sub{color:var(--mut);font-size:16px;margin-top:8px}
+  .open{margin-top:auto;height:72px;border-radius:12px;background:var(--acc);color:var(--on-acc);font-size:20px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:12px}
+  .open svg{width:24px;height:24px}
+
+  .clock{padding:20px 24px;display:flex;align-items:flex-end;justify-content:space-between}
+  .clock .t{font-size:64px;font-weight:300;line-height:1;letter-spacing:-.02em}
+  .clock .d{color:var(--fg2);font-size:18px;margin-top:8px}
+  .clock .w{text-align:right}
+  .clock .w b{font-size:32px;font-weight:400;display:block;line-height:1}
+  .clock .w span{color:var(--mut);font-size:16px;display:block;margin-top:8px}
+
+  /* bottom bar */
+  .bar{position:absolute;left:24px;right:24px;bottom:16px;height:72px;display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .bar button{height:72px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:12px;font-size:18px;color:var(--fg)}
+  .bar button svg{color:var(--fg2)}
+  .bar .mono{color:var(--fg2);font-size:16px}
+</style></head>
+<body><div class="page">
+<h1>Главный экран и эквалайзер, версия 7</h1>
+<p>Нейтральный «ночной» фон, один голубой акцент (подключение и прогресс трека), фирменная деталь — шкала с делениями, как на приборке. Ничего не листается, всё под палец 64 px и больше. Обложка — пример: на магнитоле будет настоящая обложка из телефона.</p>
+
+<div class="fit" id="fit"><div class="stage" id="stage">
+  <div class="sys"><span class="nav"><i><svg viewBox="0 0 24 24"><path d="M16 5 7 12l9 7z"/></svg></i><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg></i><i><svg viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="2"/></svg></i><em>системная панель магнитолы</em></span><span>Bluetooth · Wi‑Fi</span></div>
+
+  <div class="main">
+    <section class="card np">
+      <div class="cover">
+        <svg viewBox="0 0 232 232" width="232" height="232">
+          <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c1220"/><stop offset="1" stop-color="#1b2233"/></linearGradient></defs>
+          <rect width="232" height="232" fill="url(#sky)"/>
+          <path d="M0 150 60 132 120 140 180 126 232 136V232H0z" fill="#0a0d16"/>
+          <path d="M98 232 112 140h8l14 92z" fill="#151a26"/>
+          <path d="M115 232 116 150" stroke="#e8b04a" stroke-width="2" stroke-dasharray="8 10"/>
+          <g fill="#f2c26b"><circle cx="70" cy="118" r="2.5"/><circle cx="86" cy="126" r="2"/><circle cx="98" cy="131" r="1.5"/><circle cx="160" cy="118" r="2.5"/><circle cx="146" cy="126" r="2"/><circle cx="134" cy="131" r="1.5"/></g>
+          <g fill="#f2c26b" opacity=".18"><circle cx="70" cy="118" r="10"/><circle cx="160" cy="118" r="10"/></g>
+          <circle cx="182" cy="44" r="12" fill="#d9dde6" opacity=".85"/>
+        </svg>
+      </div>
+      <div class="meta">
+        <div class="src"><svg class="i" viewBox="0 0 24 24"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg>Bluetooth · iPhone</div>
+        <div class="ttl">Северная трасса</div>
+        <div class="art">Ольга Ланская</div>
+        <div class="alb">Огни на обочине · 2024</div>
+        <div class="vol"><span>Громкость</span><div class="ticks" id="vt"></div><b class="mono">18</b></div>
+      </div>
+      <div class="transport">
+        <div class="scale"><div class="tk"></div><div class="tr"><i></i></div></div>
+        <div class="times mono"><span>1:24</span><span>3:41</span></div>
+        <div class="ctl">
+          <button class="b" aria-label="Предыдущий"><svg class="i" viewBox="0 0 24 24"><path d="M19 20 9 12l10-8zM5 19V5"/></svg></button>
+          <button class="p" id="pp" aria-label="Пауза"><svg class="i" viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></button>
+          <button class="b" aria-label="Следующий"><svg class="i" viewBox="0 0 24 24"><path d="m5 4 10 8-10 8zM19 5v14"/></svg></button>
+        </div>
+      </div>
+    </section>
+
+    <div class="col">
+      <section class="card phone">
+        <div class="row"><span class="dot"></span>iPhone подключён</div>
+        <h2>CarPlay</h2>
+        <div class="sub">Карта и музыка с iPhone. С Android-телефоном здесь будет Android Auto</div>
+        <button class="open"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="9" height="18" rx="2"/><path d="M7 17.5h1M15 12h6M18 9l3 3-3 3"/></svg>Открыть CarPlay</button>
+      </section>
+      <section class="card clock">
+        <div><div class="t" id="clk" style="font-variant-numeric:tabular-nums">22:50</div><div class="d" id="dt">Суббота, 8 ноября</div></div>
+        <div class="w"><b class="mono">−3°</b><span>Омск, облачно</span></div>
+      </section>
+    </div>
+  </div>
+
+  <nav class="bar">
+    <button><svg class="i" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Музыка</button>
+    <button><svg class="i" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8l10-5"/><circle cx="15.5" cy="14" r="2.5"/><path d="M6.5 12.5h4M6.5 15.5h4"/></svg>Радио</button>
+    <button><svg class="i" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Звук</button>
+    <button><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 1-7 4-7 2 0 3 2 2 4l-4 4M14 12c4 0 7 1 7 4 0 2-2 3-4 2l-4-4M12 14c0 4-1 7-4 7-2 0-3-2-2-4l4-4M10 12c-4 0-7-1-7-4 0-2 2-3 4-2l4 4"/></svg>Охлаждение <span class="mono">40°</span></button>
+    <button><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Файлы</button>
+    <button><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Приложения</button>
+  </nav>
+</div></div>
+</div>
+<script>
+  var tk=document.querySelector('.scale .tk');for(var j=0;j<=40;j++){var t=document.createElement('s');if(j%10==0)t.className='l';tk.appendChild(t);}var vt=document.getElementById('vt');for(var i=1;i<=30;i++){var s=document.createElement('s');if(i<=18)s.className='on';vt.appendChild(s);}
+  function fit(){var f=document.getElementById('fit');document.getElementById('stage').style.transform='scale('+(f.clientWidth/1280)+')';}
+  window.addEventListener('resize',fit);fit();
+  var pp=document.getElementById('pp'),playing=true;pp.onclick=function(){playing=!playing;pp.setAttribute('aria-label',playing?'Пауза':'Играть');pp.querySelector('path').setAttribute('d',playing?'M6 4h4v16H6zM14 4h4v16h-4z':'M7 4v16l13-8z');};
+  function tick(){var d=new Date(),W=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'],M=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];document.getElementById('clk').textContent=d.getHours()+':'+('0'+d.getMinutes()).slice(-2);document.getElementById('dt').textContent=W[d.getDay()]+', '+d.getDate()+' '+M[d.getMonth()];}
+  tick();setInterval(tick,10000);
+</script>
+<style>
+  .e-main{position:absolute;top:40px;left:0;right:0;bottom:0;padding:16px 24px 24px}
+  .e-head{height:64px;display:flex;align-items:center;gap:16px}
+  .e-head h2{font-size:28px;font-weight:500;margin-right:8px}
+  .e-tabs{display:flex;padding:4px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+  .e-tabs button{height:56px;padding:0 24px;border-radius:8px;font-size:18px;color:var(--fg2)}
+  .e-tabs button.on{background:var(--raised);color:var(--fg);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),inset 0 -2px 0 var(--acc)}
+  .e-byp{margin-left:auto;display:flex;align-items:center;gap:12px;height:64px;padding:0 20px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-size:18px}
+  .sw{width:56px;height:32px;border-radius:16px;background:rgba(238,240,245,.16);position:relative;transition:background-color .15s var(--ease)}
+  .sw::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:var(--fg);transition:transform .15s var(--ease)}
+  .sw.on{background:var(--acc)} .sw.on::after{transform:translateX(24px);background:var(--on-acc)}
+  .e-grid{position:absolute;top:136px;left:24px;right:24px;bottom:24px;display:grid;grid-template-columns:1fr 392px;gap:16px}
+  .e-eq{padding:20px 24px;display:flex;flex-direction:column}
+  .e-pre{display:flex;gap:8px}
+  .e-pre button{height:56px;padding:0 20px;border-radius:10px;background:var(--raised);border:1px solid var(--line);font-size:18px;color:var(--fg2)}
+  .e-pre button.on{background:var(--fg);color:var(--bg);border-color:transparent}
+  .e-pre .sep{width:1px;background:var(--line);margin:8px 4px}
+  .e-plot{flex:1;position:relative;margin-top:16px;display:grid;grid-template-columns:56px repeat(10,1fr)}
+  .e-axis{position:relative}
+  .e-axis span{position:absolute;right:12px;transform:translateY(-50%);color:var(--mut);font-size:16px}
+  .e-gl{position:absolute;left:56px;right:0;height:1px;background:var(--line);pointer-events:none}
+  .e-gl.z{background:rgba(238,240,245,.35)}
+  .e-band{position:relative;display:flex;flex-direction:column;align-items:center}
+  .e-val{height:24px;font-size:16px;color:var(--fg2)}
+  .e-tr{position:absolute;top:48px;bottom:48px;width:8px;border-radius:4px;background:rgba(238,240,245,.10);cursor:pointer;touch-action:none}
+  .e-tr::before{content:"";position:absolute;left:-28px;right:-28px;top:-20px;bottom:-20px}
+  .e-kn{position:absolute;left:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:var(--fg);border:6px solid var(--card)}
+  .e-hz{position:absolute;bottom:0;height:24px;font-size:16px;color:var(--mut)}
+  .e-curve{position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none;overflow:visible}
+  .e-side{display:grid;grid-template-rows:auto auto 1fr;gap:16px}
+  .e-box{padding:20px}
+  .e-box h3{font-size:18px;font-weight:500;color:var(--fg2);margin-bottom:12px}
+  .stp{display:grid;grid-template-columns:64px 1fr 64px;align-items:center;gap:8px;margin-top:8px}
+  .stp button{height:64px;border-radius:10px;background:var(--raised);border:1px solid var(--line);font-size:28px;line-height:1}
+  .stp .v{text-align:center}.stp .v b{display:block;font-size:26px;font-weight:500}.stp .v span{font-size:16px;color:var(--mut)}
+  .seg{display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:12px;background:var(--raised);margin-top:12px}
+  .seg button{height:56px;border-radius:8px;font-size:18px;color:var(--fg2)}
+  .seg button.on{background:var(--fg);color:var(--bg)}
+  .seg-l{font-size:16px;color:var(--mut);margin-top:12px}
+  .row2{display:flex;align-items:center;justify-content:space-between;font-size:18px;min-height:64px}
+  .bal{display:flex;align-items:center;gap:16px}
+  .bal .car{width:56px;height:88px;border-radius:20px 20px 12px 12px;border:2px solid rgba(238,240,245,.25);position:relative;flex:none}
+  .bal .car i{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--acc);left:12px;top:30px}
+  .bal .txt{flex:1;font-size:18px}.bal .txt span{display:block;color:var(--mut);font-size:16px;margin-top:4px}
+  .e-plot.off{pointer-events:none}
+  .e-pre.off button{opacity:.4;pointer-events:none}
+  .e-hint{min-height:24px;margin-top:12px;font-size:16px;color:var(--mut)}
+  .e-hint b{color:var(--fg2);font-weight:500}
+  .e-pre button.saved{background:var(--acc);color:var(--on-acc)}
+  .e-soon{position:absolute;top:136px;left:24px;right:24px;bottom:24px;display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;text-align:center}
+  .e-soon b{font-size:24px;font-weight:500}.e-soon span{color:var(--fg2);font-size:18px;max-width:560px}
+  .stp button:disabled{opacity:.35;cursor:default}
+  .bal .car i{transition:left .2s var(--ease),top .2s var(--ease)}
+  .bal button{height:64px;padding:0 20px;border-radius:10px;background:var(--raised);border:1px solid var(--line);font-size:18px}
+</style>
+
+<div class="fit" style="margin-top:24px" id="fit2"><div class="stage" id="stage2">
+  <div class="sys"><span class="nav"><i><svg viewBox="0 0 24 24"><path d="M16 5 7 12l9 7z"/></svg></i><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg></i><i><svg viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="2"/></svg></i><em>системная панель магнитолы</em></span><span>Bluetooth · Wi‑Fi</span></div>
+  <div class="e-main">
+    <div class="e-head">
+      <h2>Звук</h2>
+      <div class="e-tabs" id="tabs"><button class="on">Эквалайзер</button><button>Сабвуфер и фильтры</button><button>Задержка</button></div>
+      <button class="e-byp" id="byp">Эквалайзер <span class="sw on" id="sw"></span></button>
+    </div>
+  </div>
+  <div class="e-grid">
+    <section class="card e-eq">
+      <div class="e-pre" id="pre"></div>
+      <div class="e-hint" id="hint"></div>
+      <div class="e-plot" id="plot" style="margin-top:4px"><div class="e-axis" id="axis"></div><svg class="e-curve" id="cv"></svg></div>
+    </section>
+    <div class="e-side">
+      <section class="card e-box">
+        <h3>Сабвуфер</h3>
+        <div class="stp" data-k="lvl"><button>−</button><div class="v"><b class="mono" id="lvl">+4 дБ</b><span>уровень</span></div><button>+</button></div>
+        <div class="stp" data-k="cut"><button>−</button><div class="v"><b class="mono" id="cut">80 Гц</b><span>срез, 10–200 Гц</span></div><button>+</button></div>
+        <div class="seg" id="ph"><button class="on">Фаза 0°</button><button>180°</button></div>
+      </section>
+      <section class="card e-box" style="padding-top:8px;padding-bottom:8px">
+        <div class="row2"><span>Тонкомпенсация</span><span class="sw on" onclick="this.classList.toggle('on')"></span></div>
+      </section>
+      <section class="card e-box bal">
+        <div class="car"><i id="bdot"></i></div>
+        <div class="txt">Баланс<span id="btxt">Точка звука: водитель</span></div>
+        <button id="bbtn">Центр</button>
+      </section>
+    </div>
+  </div>
+  <div class="e-soon card" id="soon"><b id="soonT"></b><span>Этот экран появится, если проверка по USB покажет, что аудиочип магнитолы даёт этим управлять</span></div>
+</div></div>
+
+<script>
+(function(){
+  var HZ=['31','62','125','250','500','1к','2к','4к','8к','16к'],MAX=12;
+  var P={'Ровный':[0,0,0,0,0,0,0,0,0,0],'Рок':[5,4,2,-1,-2,0,2,4,5,5],'Поп':[-1,1,3,4,3,1,0,1,2,2],'Голос':[-3,-2,0,2,4,5,4,2,0,-1],'Мой 1':[4,3,1,0,-1,0,1,3,4,3],'Мой 2':[6,5,2,0,0,0,0,1,2,2],'Мой 3':[0,0,0,0,0,0,0,0,0,0]};
+  var cur='Мой 1',vals=P[cur].slice(),on=true,dirty=false,flash='';
+  var pre=document.getElementById('pre'),plot=document.getElementById('plot'),cv=document.getElementById('cv'),axis=document.getElementById('axis'),hint=document.getElementById('hint');
+  Object.keys(P).forEach(function(k,idx){if(idx===4){var s=document.createElement('span');s.className='sep';pre.appendChild(s);}var b=document.createElement('button');b.textContent=k;
+    var t=null,held=false;
+    b.addEventListener('pointerdown',function(){held=false;if(k.indexOf('Мой')===0&&dirty){t=setTimeout(function(){held=true;P[k]=vals.slice();cur=k;dirty=false;flash=k;draw();setTimeout(function(){flash='';draw();},1200);},600);}});
+    b.addEventListener('pointerup',function(){clearTimeout(t);});b.addEventListener('pointerleave',function(){clearTimeout(t);});
+    b.onclick=function(){if(held)return;cur=k;vals=P[k].slice();dirty=false;draw();};pre.appendChild(b);});
+  var bands=[];
+  HZ.forEach(function(h,i){var d=document.createElement('div');d.className='e-band';d.innerHTML='<div class="e-val mono"></div><div class="e-tr"><div class="e-kn"></div></div><div class="e-hz mono">'+h+'</div>';plot.appendChild(d);bands.push(d);
+    var tr=d.querySelector('.e-tr');
+    function set(e){var r=tr.getBoundingClientRect();var f=1-Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));var v=Math.round(f*2*MAX-MAX);if(v===vals[i])return;vals[i]=v;
+      if(cur.indexOf('Мой')===0){P[cur]=vals.slice();}else{dirty=true;}draw();}
+    tr.addEventListener('pointerdown',function(e){tr.setPointerCapture(e.pointerId);set(e);});
+    tr.addEventListener('pointermove',function(e){if(tr.hasPointerCapture(e.pointerId))set(e);});
+  });
+  document.getElementById('byp').onclick=function(){on=!on;document.getElementById('sw').classList.toggle('on',on);draw();};
+  [].forEach.call(document.querySelectorAll('#ph button'),function(b){b.onclick=function(){[].forEach.call(document.querySelectorAll('#ph button'),function(x){x.classList.remove('on')});b.classList.add('on');};});
+  var tabs=document.querySelectorAll('#tabs button'),soon=document.getElementById('soon');
+  [].forEach.call(tabs,function(b,i){b.onclick=function(){[].forEach.call(tabs,function(x){x.classList.toggle('on',x===b);});soon.style.display=i?'flex':'none';document.getElementById('soonT').textContent=b.textContent;document.querySelector('.e-grid').style.visibility=i?'hidden':'visible';document.getElementById('byp').style.visibility=i?'hidden':'visible';};});
+  var center=false,bdot=document.getElementById('bdot'),bbtn=document.getElementById('bbtn');
+  bbtn.onclick=function(){center=!center;bdot.style.left=center?'20px':'12px';bdot.style.top=center?'38px':'30px';document.getElementById('btxt').textContent='Точка звука: '+(center?'центр салона':'водитель');bbtn.textContent=center?'Водитель':'Центр';};
+  var st={lvl:4,cut:80},LIM={lvl:[-10,10,1],cut:[10,200,10]};
+  [].forEach.call(document.querySelectorAll('.stp'),function(s){var k=s.dataset.k,bs=s.querySelectorAll('button');
+    function upd(){document.getElementById(k).textContent=k==='lvl'?((st.lvl>0?'+':st.lvl<0?'−':'')+Math.abs(st.lvl)+' дБ'):(st.cut+' Гц');bs[0].disabled=st[k]<=LIM[k][0];bs[1].disabled=st[k]>=LIM[k][1];}
+    bs[0].onclick=function(){st[k]=Math.max(LIM[k][0],st[k]-LIM[k][2]);upd();};
+    bs[1].onclick=function(){st[k]=Math.min(LIM[k][1],st[k]+LIM[k][2]);upd();};upd();});
+  function draw(){
+    [].forEach.call(pre.querySelectorAll('button'),function(b){b.classList.toggle('on',!dirty&&b.textContent===cur);b.classList.toggle('saved',b.textContent===flash);});
+    pre.classList.toggle('off',!on);plot.classList.toggle('off',!on);
+    hint.innerHTML=!on?'Эквалайзер выключен, звук идёт без обработки':flash?'<b>Сохранено в «'+flash+'»</b>':dirty?'<b>«'+cur+'» изменён.</b> Удерживайте «Мой 1–3», чтобы сохранить':cur.indexOf('Мой')===0?'Правки сразу сохраняются в «'+cur+'»':'Готовый пресет. Подвиньте полосу, чтобы сделать свой';
+    var tr0=bands[0].querySelector('.e-tr'),top=tr0.offsetTop,h=tr0.offsetHeight;
+    plot.querySelectorAll('.e-gl').forEach(function(x){x.remove();});axis.innerHTML='';
+    [12,6,0,-6,-12].forEach(function(db){var y=top+h*(1-(db+MAX)/(2*MAX));var g=document.createElement('div');g.className='e-gl'+(db===0?' z':'');g.style.top=y+'px';plot.insertBefore(g,cv);var s=document.createElement('span');s.className='mono';s.style.top=y+'px';s.textContent=(db>0?'+':db<0?'−':'')+Math.abs(db);axis.appendChild(s);});
+    var pts=[];
+    bands.forEach(function(d,i){var v=vals[i],f=(v+MAX)/(2*MAX);d.querySelector('.e-kn').style.top=(100-f*100)+'%';d.querySelector('.e-val').textContent=(v>0?'+':v<0?'−':'')+Math.abs(v);d.style.opacity=on?1:.4;pts.push([d.offsetLeft+d.offsetWidth/2,top+h*(1-f)]);});
+    cv.setAttribute('viewBox','0 0 '+plot.clientWidth+' '+plot.clientHeight);
+    var p='M'+pts[0][0]+' '+pts[0][1];for(var i=1;i<pts.length;i++){var a=pts[i-1],b=pts[i],mx=(a[0]+b[0])/2;p+=' C'+mx+' '+a[1]+' '+mx+' '+b[1]+' '+b[0]+' '+b[1];}
+    var z=top+h/2;
+    cv.innerHTML=on?'<path d="'+p+' L'+pts[9][0]+' '+z+' L'+pts[0][0]+' '+z+'Z" fill="rgba(56,189,248,.10)"/><path d="'+p+'" stroke="#38bdf8" stroke-width="3" fill="none"/>':'';
+  }
+  function fit2(){var f=document.getElementById('fit2');document.getElementById('stage2').style.transform='scale('+(f.clientWidth/1280)+')';}
+  addEventListener('resize',fit2);fit2();setTimeout(draw,60);draw();
+})();
+</script>
+
+</body></html>
