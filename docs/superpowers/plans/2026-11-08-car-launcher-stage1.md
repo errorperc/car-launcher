@@ -14,6 +14,8 @@
 
 ## Global Constraints
 
+- Рабочая машина: Mac владельца (macOS, zsh), он же едет в машину. Python: `python3 -m venv .venv`, все команды `.venv/bin/python …`. Репозиторий уже создан: `github.com/errorperc/car-launcher` (private), ветка `main`, `.gitignore` и `.gitattributes` на месте.
+- Связь с магнитолой: `adb` по Wi‑Fi (`adb pair <ip>:<port>` по коду, затем `adb connect <ip>:<port>`); кабель, только если у магнитолы есть разъём в режиме устройства. После перезагрузки магнитолы Wi‑Fi-соединение восстанавливать через `adb connect`.
 - Устройство: Android 12, 2 ГБ ОЗУ, экран 1280×720 landscape. `minSdk 31`, `targetSdk 31`, `compileSdk 34`.
 - Только `pm disable-user --user 0` или `pm uninstall -k --user 0`. Системный раздел и root не трогаем.
 - Никогда не отключать: приложение подключения телефона и его зависимости (Bluetooth, USB, сеть, звук), вентилятор BOS-MINI, «Настройки», SystemUI, системные службы звука, MCU/CAN, штатное радио, установщик пакетов, одну клавиатуру.
@@ -38,14 +40,15 @@
 ### Task 0: Инструменты и каркас проекта
 
 **Files:**
-- Create: `.gitignore`, `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`, `gradle/wrapper/*`, `gradlew`, `gradlew.bat`
+- Modify: `.gitignore` (уже есть, дополнить при нужде)
+- Create: `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`, `gradle/wrapper/*`, `gradlew`, `gradlew.bat`
 - Create: `app/build.gradle.kts`, `app/src/main/AndroidManifest.xml`, `app/src/main/java/dev/carhome/HomeActivity.kt` (пустая)
 - Create: `tools/adb/__init__.py`, `tests/tools/__init__.py`, `requirements-dev.txt` (`pytest==8.3.3`)
 
 - [ ] **Step 1: Спросить владельца и установить инструменты.** Работа идёт на Mac владельца (ноутбук, который едет в машину). Через Homebrew: `brew install openjdk@17 android-platform-tools` и `brew install --cask android-commandlinetools`, затем `sdkmanager "platforms;android-34" "build-tools;34.0.0"`. Прописать `JAVA_HOME` (`$(brew --prefix openjdk@17)`) и `ANDROID_HOME` (`$(brew --prefix)/share/android-commandlinetools`). Если работа всё-таки на Windows: winget `Microsoft.OpenJDK.17`, `Google.PlatformTools`, SDK в `%LOCALAPPDATA%\Android\Sdk`.
 - [ ] **Step 2: Проверить.** `java -version` → 17, `adb version` → печатает версию, `sdkmanager --list_installed` → есть `platforms;android-34`.
-- [ ] **Step 3: `git init`, каркас Gradle.** applicationId `dev.carhome`, имя приложения «Главный», `minSdk 31`, `targetSdk 31`. Зависимостей приложения нет, кроме Kotlin stdlib; тесты: `junit:junit:4.13.2`.
-- [ ] **Step 4: Собрать.** `./gradlew assembleDebug test` → BUILD SUCCESSFUL. `python -m pytest tests` → `no tests ran`, код выхода 5 считается нормой.
+- [ ] **Step 3: Каркас Gradle** (репозиторий уже есть, `git init` не нужен). applicationId `dev.carhome`, имя приложения «Главный», `minSdk 31`, `targetSdk 31`. Зависимостей приложения нет, кроме Kotlin stdlib; тесты: `junit:junit:4.13.2`.
+- [ ] **Step 4: Собрать.** `./gradlew assembleDebug test` → BUILD SUCCESSFUL. `python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt`, затем `.venv/bin/python -m pytest tests` → `no tests ran`, код выхода 5 считается нормой.
 - [ ] **Step 5: Commit** `chore: project skeleton`.
 
 ### Task 1: ADB-обёртка и разведка
@@ -55,7 +58,7 @@
 - Test: `tests/tools/test_recon.py`
 
 **Interfaces:**
-- Produces: `class Adb(runner: Callable[[list[str]], str] = run_adb, serial: str | None = None)` с методом `shell(cmd: str) -> str`; `recon.collect(adb: Adb, outdir: Path) -> list[Path]`; CLI `python -m tools.adb.recon --out recon/<YYYY-MM-DD>`.
+- Produces: `class Adb(runner: Callable[[list[str]], str] = run_adb, serial: str | None = None)` с методом `shell(cmd: str) -> str`; `recon.collect(adb: Adb, outdir: Path) -> list[Path]`; CLI `.venv/bin/python -m tools.adb.recon --out recon/<YYYY-MM-DD>`.
 
 - [ ] **Step 1: Тест.**
 ```python
@@ -70,7 +73,7 @@ def test_collect_writes_one_file_per_command(tmp_path):
     assert all(f.read_text() == "out" for f in files)
     assert ["shell", "pm list packages -f"] in calls
 ```
-- [ ] **Step 2: Запустить** `python -m pytest tests/tools/test_recon.py` → FAIL (нет модуля).
+- [ ] **Step 2: Запустить** `.venv/bin/python -m pytest tests/tools/test_recon.py` → FAIL (нет модуля).
 - [ ] **Step 3: Реализовать.** Команды: `getprop`, `pm list packages -f`, `dumpsys meminfo`, `top -b -n 1`, `dumpsys media.audio_flinger`, `dumpsys audio`, `dumpsys media.audio_policy`, `cat /vendor/etc/audio_effects.xml` (если нет, то `/system/etc/audio_effects.xml`), `for z in /sys/class/thermal/thermal_zone*; do echo $z $(cat $z/type) $(cat $z/temp); done`, `getevent -pl`. Если команда упала, текст ошибки пишем в файл и идём дальше.
 - [ ] **Step 4: Запустить** → PASS.
 - [ ] **Step 5: Commit** `feat(tools): adb wrapper and recon`.
@@ -123,8 +126,8 @@ def test_load_groups_skips_comments(tmp_path):
 **Interfaces:**
 - Produces: `object DeviceConfig { const val LINK_PACKAGE: String; const val FAN_PACKAGE: String; const val RADIO_PACKAGE: String; const val FILES_PACKAGE: String; const val MUSIC_FALLBACK_PACKAGE: String; const val VENDOR_SOUND_PACKAGE: String? }`.
 
-- [ ] **Step 1:** Владелец включает режим разработчика и отладку по USB, подключает кабель, подтверждает ключ на экране. `adb devices` → одно устройство `device`.
-- [ ] **Step 2:** `python -m tools.adb.recon --out recon/<дата>` и `python -m tools.adb.debloat snapshot recon/<дата>/baseline.json`.
+- [ ] **Step 1:** Владелец включает режим разработчика, «Отладку по USB» и «Отладку по Wi‑Fi»; ноутбук и магнитола в одной сети. «Подключение по коду» на магнитоле → `adb pair <ip>:<port>` с кодом → `adb connect <ip>:<port>` (порт из экрана «Отладка по Wi‑Fi»). Если есть разъём в режиме устройства, можно кабелем. `adb devices` → одно устройство `device`.
+- [ ] **Step 2:** `.venv/bin/python -m tools.adb.recon --out recon/<дата>` и `.venv/bin/python -m tools.adb.debloat snapshot recon/<дата>/baseline.json`.
 - [ ] **Step 3:** В `docs/recon.md` записать:
   - пакеты: приложение подключения, вентилятор, радио, файлы, плеер, штатное приложение звука;
   - как определить, что телефон подключён (процесс, уведомление, USB-устройство, broadcast), и iPhone это или Android;
@@ -137,10 +140,10 @@ def test_load_groups_skips_comments(tmp_path):
 
 ### Task 4: Чистка магнитолы (работа на устройстве)
 
-- [ ] **Step 1:** `python -m tools.adb.debloat disable --group <первая группа>`.
+- [ ] **Step 1:** `.venv/bin/python -m tools.adb.debloat disable --group <первая группа>`.
 - [ ] **Step 2:** Перезагрузить, подключить iPhone: CarPlay открывается, звук идёт, вентилятор открывается. Если нет — `restore` и разобрать группу по одному пакету.
 - [ ] **Step 3:** Повторить шаги 1–2 для каждой группы.
-- [ ] **Step 4:** `python -m tools.adb.debloat animations 0.5`. Снять `dumpsys meminfo` (свободная память до и после) в `docs/recon.md`.
+- [ ] **Step 4:** `.venv/bin/python -m tools.adb.debloat animations 0.5`. Снять `dumpsys meminfo` (свободная память до и после) в `docs/recon.md`.
 - [ ] **Step 5: Commit** `chore: debloat applied, state saved`.
 
 ### Task 5: Тема, шрифты и неподвижный главный экран
